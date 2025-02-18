@@ -1,6 +1,7 @@
 import streamlit as st
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig # Modified import statement
+from google.generativeai.generative_models import GenerativeModel
 import pandas as pd
 import numpy as np
 import json
@@ -53,7 +54,7 @@ def clean_and_parse_json(json_text):
 
 def generate_bulk_evaluations(survey_question, responses, batch_size, generation_config):
     """
-    Evaluate survey responses in batches using Vertex AI.
+    Evaluate survey responses in batches using Google AI Studio API.
     For each response, the evaluation includes:
       - response (text; you may truncate after three words if needed)
       - relevance (0-10)
@@ -65,7 +66,7 @@ def generate_bulk_evaluations(survey_question, responses, batch_size, generation
       - explanation (brief justification)
     The output is expected as a JSON array.
     """
-    model = GenerativeModel("gemini-2.0-flash-001")
+    model = genai.GenerativeModel("gemini-2.0-flash-001") # Corrected model call
     batches = batch_responses(responses, batch_size)
     all_evaluations = []
 
@@ -120,7 +121,7 @@ def generate_single_evaluation(survey_question, response, generation_config):
     "response", "relevance", "completeness", "specificity", "language_quality",
     "sentiment_alignment", "overall_score", "explanation"
     """
-    model = GenerativeModel("gemini-2.0-flash-001")
+    model = genai.GenerativeModel("gemini-2.0-flash-001") # Corrected model call
     prompt = f"""
 Survey Question: "{survey_question}"
 
@@ -159,7 +160,7 @@ def check_response_relevancy(survey_question, response, generation_config):
     "negative": score (0-10),
     "neutral": score (0-10).
     """
-    model = GenerativeModel("gemini-2.0-flash-001")
+    model = genai.GenerativeModel("gemini-2.0-flash-001") # Corrected model call
     prompt = f"""
 Survey Question: "{survey_question}"
 
@@ -268,22 +269,21 @@ if "initialized" not in st.session_state:
     st.session_state.initialized = False
 
 if not st.session_state.initialized:
-    st.sidebar.header("Vertex AI Initialization")
-    project_name = st.sidebar.text_input("Google Cloud Project Name")
-    location = st.sidebar.text_input("Vertex AI Location", value="us-central1")
-    if st.sidebar.button("Initialize Vertex AI"):
-        if project_name and location:
+    st.sidebar.header("Google AI Studio Initialization")
+    api_key = st.sidebar.text_input("Google AI Studio API Key", type="password")
+    if st.sidebar.button("Initialize Google AI Studio"):
+        if api_key:
             try:
-                vertexai.init(project=project_name, location=location)
+                genai.configure(api_key=api_key)
                 st.session_state.initialized = True
-                st.success("Vertex AI initialized successfully.")
+                st.success("Google AI Studio initialized successfully.")
             except Exception as e:
                 st.error(f"Initialization error: {str(e)}")
         else:
-            st.error("Please provide both project name and location.")
+            st.error("Please provide your Google AI Studio API Key.")
 else:
     st.sidebar.header("Generative Model Settings")
-    batch_size = st.sidebar.slider("Batch Size", min_value=1, max_value=200, value=50)
+    batch_size = st.sidebar.slider("Batch Size", min_value=1, max_value=50, value=7)
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.2)
     top_k = st.sidebar.number_input("Top K", min_value=1, value=40)
     top_p = st.sidebar.slider("Top P", min_value=0.0, max_value=1.0, value=0.8)
