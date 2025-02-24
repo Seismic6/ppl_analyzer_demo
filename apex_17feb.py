@@ -121,7 +121,7 @@ def generate_single_evaluation(survey_question, response, generation_config):
     "response", "relevance", "completeness", "specificity", "language_quality",
     "sentiment_alignment", "overall_score", "explanation"
     """
-    model = genai.GenerativeModel("gemini-2.0-flash-001") # Corrected model call
+    model = genai.GenerativeModel("gemini-2.0-flash-001")
     prompt = f"""
 Survey Question: "{survey_question}"
 
@@ -160,7 +160,7 @@ def check_response_relevancy(survey_question, response, generation_config):
     "negative": score (0-10),
     "neutral": score (0-10).
     """
-    model = genai.GenerativeModel("gemini-2.0-flash-001") # Corrected model call
+    model = genai.GenerativeModel("gemini-2.0-flash-001") 
     prompt = f"""
 Survey Question: "{survey_question}"
 
@@ -270,24 +270,24 @@ if "initialized" not in st.session_state:
 
 if not st.session_state.initialized:
     st.sidebar.header("Google AI Studio Initialization")
-    api_key = st.sidebar.text_input("Google AI Studio API Key", type="password")
-    if st.sidebar.button("Initialize Google AI Studio"):
+    api_key = st.sidebar.text_input("Gemini API Key, generate at https://aistudio.google.com/apikey", type="password")
+    if st.sidebar.button("Initialize App"):
         if api_key:
             try:
                 genai.configure(api_key=api_key)
                 st.session_state.initialized = True
-                st.success("Google AI Studio initialized successfully.")
+                st.success("App initialized successfully.")
             except Exception as e:
                 st.error(f"Initialization error: {str(e)}")
         else:
             st.error("Please provide your Google AI Studio API Key.")
 else:
     st.sidebar.header("Generative Model Settings")
-    batch_size = st.sidebar.slider("Batch Size", min_value=1, max_value=50, value=7)
+    batch_size = st.sidebar.slider("Batch Size", min_value=1, max_value=50, value=25)
     temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=1.0, value=0.2)
     top_k = st.sidebar.number_input("Top K", min_value=1, value=40)
     top_p = st.sidebar.slider("Top P", min_value=0.0, max_value=1.0, value=0.8)
-    max_output_tokens = st.sidebar.number_input("Max Output Tokens", min_value=100, value=2048)
+    max_output_tokens = st.sidebar.number_input("Max Output Tokens", min_value=100, value=8192, max_value=8192)
 
     generation_config = GenerationConfig(
         temperature=temperature,
