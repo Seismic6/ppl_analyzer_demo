@@ -55,7 +55,7 @@ Evaluate each response based on these criteria:
 4. Specificity (0-10): Detail level
 5. Language Quality (0-10): Coherence and grammar
 6. Sentiment Alignment (0-10): Tone match with question
-7. Topic Status: "On-topic" or "Off-topic"
+7. Topic Status: "On-topic" or "Off-topic" [Determine whether the response is On-topic or Off-topic in relation to the survey question, be critical]
 8. Sentiment Scores: Positive/Negative/Neutral (0-10 each)
 9. Overall Score (0-100): Weighted sum
 10. Explanation: Brief justification (1-2 sentences)
