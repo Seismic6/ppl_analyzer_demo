@@ -50,18 +50,60 @@ def evaluate_responses(survey_question, responses, is_batch, batch_size, generat
     
     evaluation_prompt = """
 Evaluate each response based on these criteria:
-1. Response: Full text (truncate after 3 words if too long)
-2. Relevance (0-10): Directness in addressing the question
-3. Completeness (0-10): Fullness of answer
-4. Specificity (0-10): Detail level
-5. Language Quality (0-10): Coherence and grammar
-6. Sentiment Alignment (0-10): Tone match with question
-7. Topic Status: "On-topic" or "Off-topic" [Determine whether the response is On-topic or Off-topic in relation to the survey question, be critical; for example if the question is name a luxury perfume brand and the respondent replies "Axe body spray" it is off topic as Axe is not a luxury perfume brand]
-8. Sentiment Scores: Positive/Negative/Neutral (0-10 each)
-9. Overall Score (0-100): Weighted sum
-10. Explanation: Brief justification (1-2 sentences)
 
-Output as JSON array with keys:
+1. Response: Full text of the answer (truncate after 100 characters if too long)
+
+2. Relevance (0-10): How directly and accurately the response addresses the specific question asked
+   - 0-3: Barely relevant or misses the point
+   - 4-6: Partially addresses the question
+   - 7-10: Directly addresses the core of the question
+
+3. Completeness (0-10): How thoroughly the response answers all aspects of the question
+   - 0-3: Highly incomplete, missing major elements
+   - 4-6: Addresses some but not all aspects
+   - 7-10: Comprehensively covers all aspects of the question
+
+4. Specificity (0-10): Level of detail, precision, and concrete information provided
+   - 0-3: Vague, general statements only
+   - 4-6: Some specific details but lacks depth
+   - 7-10: Rich in specific, precise details and examples
+
+5. Language Quality (0-10): Coherence, clarity, grammar, and appropriate vocabulary
+   - 0-3: Poor grammar, difficult to understand
+   - 4-6: Generally understandable but with issues
+   - 7-10: Well-written, clear, and grammatically sound
+
+6. Sentiment Alignment (0-10): How well the tone matches what's appropriate for the question
+   - 0-3: Completely mismatched tone
+   - 4-6: Somewhat appropriate tone
+   - 7-10: Perfectly matched tone and sentiment
+
+7. Topic Status: "On-topic" or "Off-topic" 
+   - Strictly evaluate whether the response addresses the question's subject matter
+   - Be critical in assessment and mark as Off-topic if the response:
+     
+     * Mentions incorrect brand categories (e.g., if asked about luxury perfume brands and "Axe body spray" is mentioned)
+     * Discusses wrong time periods (e.g., if asked about 1980s movies and response mentions 2010s films)
+     * References incorrect geographic locations (e.g., if asked about Italian cuisine and response focuses on French dishes)
+     * Addresses different price tiers (e.g., if asked about budget smartphones and response discusses premium $1000+ models)
+     * Covers different industry segments (e.g., if asked about commercial aircraft and response discusses military jets)
+     * Mentions incorrect professional fields (e.g., if asked about cardiologists and response discusses dermatologists)
+     * Discusses different product categories (e.g., if asked about gaming laptops and response recommends tablets)
+     * Answers a different question entirely (e.g., if asked "What makes a good leader?" and response discusses cooking techniques)
+
+8. Sentiment Scores: Rate each on scale of 0-10
+   - Positive: Degree of positive emotion/content
+   - Negative: Degree of negative emotion/content
+   - Neutral: Degree of neutral/objective content
+
+9. Overall Score (0-100): Calculated as follows:
+   - Sum the five main metrics (Relevance + Completeness + Specificity + Language Quality + Sentiment Alignment)
+   - This gives a score out of 50
+   - Multiply by 2 to convert to a 0-100 scale: Overall Score = (Sum of 5 metrics) × 2
+
+10. Explanation: Provide a 1-2 sentence justification for the overall evaluation
+
+Output as a JSON array with these keys:
 "response", "relevance", "completeness", "specificity", "language_quality", 
 "sentiment_alignment", "topic_status", "sentiment_positive", "sentiment_negative", 
 "sentiment_neutral", "overall_score", "explanation"
