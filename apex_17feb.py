@@ -36,10 +36,11 @@ def clean_and_parse_json(json_text):
         parsed_json = json.loads(cleaned_text)
         return parsed_json if isinstance(parsed_json, list) else [parsed_json]
     except json.JSONDecodeError as e:
-        st.error(f"JSON Decode Error: {e}")
+        st.warning(f"Failed to parse JSON: {e}")
         return []
 
-# Unified Evaluation Function
+# Unified Evaluation Function with Caching
+@st.cache_data
 def evaluate_responses(survey_question, responses, is_batch, batch_size, generation_config):
     """Evaluate survey responses based on multiple criteria."""
     model = genai.GenerativeModel("gemini-2.0-flash-001")
@@ -66,7 +67,8 @@ Output as JSON array with keys:
 "sentiment_neutral", "overall_score", "explanation"
 """
     
-    progress_bar = st.progress(0)
+    if is_batch:
+        progress_bar = st.progress(0)
     start_time = time.time()
     
     for i, batch in enumerate(batches):
@@ -75,9 +77,13 @@ Survey Question: "{survey_question}"
 {evaluation_prompt}
 Responses: {json.dumps(batch)}
 """
-        result = model.generate_content(prompt, generation_config=generation_config)
-        parsed_batch = clean_and_parse_json(result.text)
-        all_evaluations.extend(parsed_batch)
+        try:
+            result = model.generate_content(prompt, generation_config=generation_config)
+            parsed_batch = clean_and_parse_json(result.text)
+            all_evaluations.extend(parsed_batch)
+        except Exception as e:
+            st.error(f"Error generating content for batch {i+1}: {e}")
+            continue
         
         if is_batch:
             progress = (i + 1) / len(batches)
@@ -107,7 +113,7 @@ def create_violin_plot(df, metric):
     ax.set_title(f"{metric.replace('_', ' ').title()} Distribution")
     st.pyplot(fig)
 
-# Clustering Function (Fixed)
+# Clustering Function
 def cluster_responses(responses, threshold):
     """Cluster responses based on similarity."""
     df = pd.DataFrame({'response': responses}).astype(str).apply(lambda x: x.str.lower())
@@ -139,7 +145,8 @@ def cluster_responses(responses, threshold):
     
     # Handle single-response clusters
     unique_groups = df['Group'].value_counts()[lambda x: x == 1].index
-    df.loc[df['Group'].isin(unique_groups), ['Group', 'Similarity Score']] = ["", np.nan]
+    df.loc[df['Group'].isin(unique_groups), 'Group'] = "Unique"
+    df.loc[df['Group'] == "Unique", 'Similarity Score'] = np.nan
     
     return df
 
@@ -172,7 +179,7 @@ def create_radar_chart(values, categories):
     
     return fig
 
-# Enhanced Single Response Dashboard
+# Single Response Dashboard
 def render_single_response_dashboard(df):
     """Render a dashboard for a single response with a radar chart."""
     if df.empty or len(df) == 0:
@@ -208,10 +215,9 @@ def render_single_response_dashboard(df):
         
         # Metrics and Radar Chart
         with st.container():
-            col_left, col_right = st.columns([1, 1])  # Equal column widths
+            col_left, col_right = st.columns([1, 1])
             
             with col_left:
-                # Metrics grid (3x2 layout)
                 with st.container():
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -261,7 +267,6 @@ def render_single_response_dashboard(df):
                         """, unsafe_allow_html=True)
             
             with col_right:
-                # Radar Chart
                 st.subheader("Metric Radar Chart")
                 radar_values = [row['relevance'], row['completeness'], row['specificity'], 
                                 row['language_quality'], row['sentiment_alignment']]
@@ -340,9 +345,12 @@ if st.session_state.initialized:
                     render_single_response_dashboard(df)
                 else:
                     st.dataframe(df)
-                    if mode == "Batch Responses":
-                        csv = df.to_csv(index=False).encode("utf-8")
-                        st.download_button("Download CSV", csv, "analysis_results.csv", "text/csv")
+                    st.subheader("Summary Statistics")
+                    numerical_cols = df.select_dtypes(include=[np.number]).columns
+                    summary = df[numerical_cols].describe().T
+                    st.table(summary[['mean', 'std', 'min', '25%', '50%', '75%', 'max']])
+                    csv = df.to_csv(index=False).encode("utf-8")
+                    st.download_button("Download CSV", csv, "analysis_results.csv", "text/csv")
             else:
                 st.error("Please provide question and response(s).")
     
@@ -351,8 +359,8 @@ if st.session_state.initialized:
         st.header("Visualizations")
         if "analysis_df" in st.session_state:
             create_word_cloud(st.session_state.responses)
-            metric = st.selectbox("Metric", options=[col for col in st.session_state.analysis_df.columns 
-                                                   if col not in ['response', 'explanation', 'topic_status']])
+            numerical_cols = st.session_state.analysis_df.select_dtypes(include=[np.number]).columns
+            metric = st.selectbox("Metric", options=numerical_cols)
             create_violin_plot(st.session_state.analysis_df, metric)
         else:
             st.info("Run an analysis first.")
